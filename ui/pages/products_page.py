@@ -181,9 +181,7 @@ class ProductsPage(BasePage):
             raise ValueError(f"Brand '{brand_name}' not found in the sidebar.")
 
         fallback_url = href or f"https://automationexercise.com/brand_products/{brand_name.strip()}"
-        self.driver.execute_script(
-            "arguments[0].scrollIntoView({block: 'center'});", link_to_click
-        )
+        self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", link_to_click)
         self.driver.execute_script("arguments[0].click();", link_to_click)
         try:
             self.wait_for_url_contains("brand_products", timeout=8)
