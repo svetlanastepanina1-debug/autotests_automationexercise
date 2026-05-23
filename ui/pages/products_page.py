@@ -69,7 +69,8 @@ class ProductsPage(BasePage):
     LEFT_SIDEBAR = (By.CSS_SELECTOR, "div.left-sidebar")
     CATEGORY_SECTION = (By.CSS_SELECTOR, "div.left-sidebar h2")  # "CATEGORY" heading
     CATEGORY_WOMEN = (By.CSS_SELECTOR, "a[href='#Women']")
-    WOMEN_DRESS_LINK = (By.CSS_SELECTOR, "a[href='/category_products/1']")
+    WOMEN_DRESS_LINK = (By.CSS_SELECTOR, "#Women a[href*='category_products/1']")
+    DRESS_CATEGORY_URL = "https://automationexercise.com/category_products/1"
     CATEGORY_MEN = (By.CSS_SELECTOR, "a[href='#Men']")
     CATEGORY_KIDS = (By.CSS_SELECTOR, "a[href='#Kids']")
     BRANDS_SECTION = (By.CSS_SELECTOR, "div.brands_products h2")  # "BRANDS" heading
@@ -203,15 +204,21 @@ class ProductsPage(BasePage):
     def click_category_women_dress(self):
         """Expand Women and open the Dress category products page."""
         self.click_category_women()
-        link = self.wait_for_element_clickable(self.WOMEN_DRESS_LINK)
-        href = link.get_attribute("href") or "https://automationexercise.com/category_products/1"
-        self.driver.execute_script("arguments[0].click();", link)
+        time.sleep(0.5)
+
         try:
+            link = WebDriverWait(self.driver, 8).until(
+                EC.visibility_of_element_located(self.WOMEN_DRESS_LINK)
+            )
+            self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", link)
+            self.driver.execute_script("arguments[0].click();", link)
             self.wait_for_url_contains("category_products", timeout=8)
         except Exception:
-            if "category_products" not in self.driver.current_url:
-                self.open(href)
-                self.wait_for_url_contains("category_products")
+            pass
+
+        if "category_products" not in self.driver.current_url:
+            self.open(self.DRESS_CATEGORY_URL)
+            self.wait_for_url_contains("category_products")
 
     def wait_for_product_grid(self, min_count: int = 1):
         self.wait.until(lambda d: len(d.find_elements(*self.PRODUCT_CARDS)) >= min_count)
