@@ -2,9 +2,12 @@ import os
 from pathlib import Path
 
 import pytest
+from pytest_html import extras as html_extras
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service as ChromeService
+
+from api.config.settings import Settings, get_settings
 
 
 def _path_without_chromedriver() -> str:
@@ -39,6 +42,21 @@ def browser_options(request):
     options.add_argument("--disable-popup-blocking")
     options.add_argument("--window-size=1920,1080")
     return options
+
+
+@pytest.fixture(scope="session")
+def settings() -> Settings:
+    return get_settings()
+
+
+@pytest.fixture(scope="session")
+def existing_user(settings: Settings) -> dict:
+    if not settings.test_user_email or not settings.test_user_password:
+        pytest.skip("TEST_USER_EMAIL and TEST_USER_PASSWORD must be set in .env for login tests")
+    return {
+        "email": settings.test_user_email,
+        "password": settings.test_user_password,
+    }
 
 
 @pytest.fixture(scope="function")
@@ -80,7 +98,7 @@ def pytest_runtest_makereport(item, call):
     screenshot_path = SCREENSHOTS_DIR / f"{safe_name}.png"
     try:
         driver.save_screenshot(str(screenshot_path))
-        report.extra = getattr(report, "extra", [])
-        report.extra.append(f"Screenshot: {screenshot_path}")
+        report.extras = getattr(report, "extras", [])
+        report.extras.append(html_extras.image(str(screenshot_path)))
     except Exception:
         pass

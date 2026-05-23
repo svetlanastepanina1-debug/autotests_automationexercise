@@ -7,6 +7,10 @@ on:
     branches: [main, master]
   workflow_dispatch:
 
+# Required for actions/checkout on PRs (especially private repos / org defaults).
+permissions:
+  contents: read
+
 jobs:
   lint:
     name: Lint (Ruff)
@@ -84,6 +88,9 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Run UI tests (headless)
+        env:
+          TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+          TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
         run: |
           mkdir -p reports/screenshots
           pytest -m ui -v --headless --tb=short \

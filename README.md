@@ -7,7 +7,7 @@
 | Набор | Технологии | Паттерн | Запуск |
 |-------|------------|---------|--------|
 | **API** (24 теста) | pytest, requests | API Client + Service Object, AAA | `pytest -m api` — браузер не нужен |
-| **UI** (~20 тестов) | pytest, selenium | Page Object Model | `pytest -m ui --headless` — нужен Chrome |
+| **UI** (70 тестов) | pytest, selenium | Page Object Model | `pytest -m ui --headless` — нужен Chrome |
 
 Тесты ходят на **живой** сайт `automationexercise.com` — нужен интернет.
 
@@ -69,13 +69,15 @@ pytest -m api -v
 - verify login: валидный / невалидный / без email / DELETE
 - жизненный цикл пользователя: create → update → get by email → delete
 
-### UI (страница `/products`)
+### UI
 
-- загрузка страницы, URL, title, заголовок `All Products`
-- поиск, карточки товаров (имя, цена, изображение, `View Product`)
-- модальное окно корзины после `Add to cart`
-- сайдбар: категории, бренды (в т.ч. ожидаемый список)
-- переход на страницу деталей товара
+**`/products`** — загрузка, поиск, карточки, модалка корзины, сайдбар категорий/брендов, переход в детали товара; углубление: фильтр Women→Dress, бренд Polo, заголовок `Searched Products`, два товара в корзине.
+
+**`/product_details`** — имя, цена, изображение, количество, отзыв, сайдбар, навигация назад в Products.
+
+**`/view_cart`** — пустая корзина, строки после добавления, совпадение с карточкой каталога, `цена × qty = total`, удаление, checkout + сверка заказа на `/checkout` (с `.env`).
+
+**`/login`** — формы Login/Signup, неверный пароль, успешный вход и logout (с `.env`).
 
 ---
 
@@ -90,8 +92,13 @@ autotests_automationexercise/
 │   └── services/                    # Products, Brands, Search, Auth, User
 ├── tests/
 │   ├── api/                       # @pytest.mark.api
-│   └── test_products_page.py      # @pytest.mark.ui
-├── ui/pages/                      # base_page, products_page
+│   ├── test_products_page.py      # @pytest.mark.ui
+│   ├── test_product_details.py
+│   ├── test_products_deepening.py
+│   ├── test_cart.py
+│   └── test_login.py
+├── ui/pages/                      # POM: products, cart, login, checkout, …
+├── ui/utils/pricing.py            # parse Rs. amounts for business asserts
 ├── conftest.py                    # UI: driver, --headless
 ├── tests/api/conftest.py          # API: api_client, services, registered_user
 ├── pytest.ini
@@ -118,9 +125,9 @@ test  →  products_service.get_products()  →  ApiClient  →  automationexerc
 
 ### UI: Page Object Model
 
-- `ui/pages/products_page.py` — локаторы и действия
-- `tests/test_products_page.py` — сценарии
-- `conftest.py` — `driver`, опция `--headless`
+- `ui/pages/*.py` — локаторы и действия по страницам
+- `tests/test_*.py` — сценарии (TC / PD / C / L / P)
+- `conftest.py` — `driver`, `--headless`, `existing_user` из `.env`
 
 ---
 
@@ -136,8 +143,8 @@ cp .env.example .env
 |------------|------------|--------------|
 | `API_BASE_URL` | Базовый URL API | `https://automationexercise.com/api` |
 | `API_TIMEOUT` | Таймаут запросов (сек) | `30` |
-| `TEST_USER_EMAIL` | Email для API 7–8 | — (тесты skip) |
-| `TEST_USER_PASSWORD` | Пароль для API 7–8 | — (тесты skip) |
+| `TEST_USER_EMAIL` | Email для API 7–8 и UI login/checkout | — (тесты skip) |
+| `TEST_USER_PASSWORD` | Пароль для API 7–8 и UI login/checkout | — (тесты skip) |
 
 ---
 
@@ -177,6 +184,8 @@ pytest tests/api/test_products_list.py -v
 ```bash
 pytest -m ui -v --headless
 pytest tests/test_products_page.py::TestPageLoad::test_page_title -v --headless
+pytest tests/test_product_details.py -v --headless   # PD-01…PD-09
+pytest tests/test_cart.py tests/test_login.py tests/test_products_deepening.py -v --headless
 ```
 
 ### Всё сразу
