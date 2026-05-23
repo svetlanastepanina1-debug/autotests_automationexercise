@@ -5,7 +5,7 @@ on:
     branches: [main, master]
   pull_request:
     branches: [main, master]
-  workflow_dispatch
+  workflow_dispatch:
 
 # Required for actions/checkout on PRs (especially private repos / org defaults).
 permissions:
