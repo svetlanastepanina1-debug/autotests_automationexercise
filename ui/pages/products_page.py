@@ -214,9 +214,7 @@ class ProductsPage(BasePage):
                 self.wait_for_url_contains("category_products")
 
     def wait_for_product_grid(self, min_count: int = 1):
-        self.wait.until(
-            lambda d: len(d.find_elements(*self.PRODUCT_CARDS)) >= min_count
-        )
+        self.wait.until(lambda d: len(d.find_elements(*self.PRODUCT_CARDS)) >= min_count)
 
     def get_main_heading_text(self) -> str:
         return self.get_text(self.ALL_PRODUCTS_HEADING)
