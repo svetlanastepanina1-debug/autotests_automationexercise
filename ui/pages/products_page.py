@@ -1,3 +1,5 @@
+import time
+
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 
@@ -101,7 +103,11 @@ class ProductsPage(BasePage):
 
     def get_all_product_names(self) -> list[str]:
         elements = self.find_elements(self.PRODUCT_NAMES)
-        return [el.text for el in elements]
+        return [el.text.strip() for el in elements]
+
+    def has_polo_related_product(self) -> bool:
+        """True if any visible product name suggests the Polo brand assortment."""
+        return any("polo" in name.lower() for name in self.get_all_product_names())
 
     def get_all_product_prices(self) -> list[str]:
         elements = self.find_elements(self.PRODUCT_PRICES)
@@ -109,6 +115,12 @@ class ProductsPage(BasePage):
 
     def get_product_count(self) -> int:
         return len(self.find_elements(self.PRODUCT_CARDS))
+
+    def get_product_name_at(self, index: int = 0) -> str:
+        return self.get_all_product_names()[index].strip()
+
+    def get_product_price_at(self, index: int = 0) -> str:
+        return self.get_all_product_prices()[index].strip()
 
     def click_view_product(self, index: int = 0):
         """
@@ -168,3 +180,52 @@ class ProductsPage(BasePage):
 
     def click_category_kids(self):
         self.click(self.CATEGORY_KIDS)
+
+    def click_subcategory(self, name: str):
+        """Click a sub-category link under an expanded category panel (e.g. Dress)."""
+        target = name.strip().upper()
+        locator = (By.CSS_SELECTOR, "div.panel-body ul li a")
+        self.wait.until(
+            lambda d: any(
+                target in el.text.strip().upper()
+                for el in d.find_elements(*locator)
+                if el.text.strip()
+            )
+        )
+        for link in self.driver.find_elements(*locator):
+            text = link.text.strip().upper()
+            if text and target in text:
+                self.driver.execute_script("arguments[0].click();", link)
+                return
+        raise ValueError(f"Sub-category '{name}' not found.")
+
+    def click_category_women_dress(self):
+        """Expand Women and open the Dress category products page."""
+        self.click_category_women()
+        time.sleep(0.5)
+        self.click_subcategory("Dress")
+
+    def get_main_heading_text(self) -> str:
+        return self.get_text(self.ALL_PRODUCTS_HEADING)
+
+    def get_searched_products_heading_text(self) -> str:
+        headings = self.find_elements(self.SEARCHED_PRODUCTS_HEADING)
+        for heading in headings:
+            text = heading.text.strip().upper()
+            if "SEARCHED" in text:
+                return heading.text.strip()
+        return headings[0].text.strip() if headings else ""
+
+    def click_view_cart_in_modal(self):
+        self.click(self.CART_MODAL_VIEW_CART)
+        self.wait_for_url_contains("view_cart")
+
+    def add_products_to_cart(self, count: int = 1):
+        """Add the first `count` products to cart via JS click on Add to cart."""
+        buttons = self.find_elements(self.ADD_TO_CART_BUTTONS)
+        for index in range(min(count, len(buttons))):
+            self.driver.execute_script("arguments[0].click();", buttons[index])
+            time.sleep(0.5)
+            if count > 1 and self.is_element_visible(self.CART_MODAL):
+                self.dismiss_cart_modal()
+                time.sleep(0.3)
