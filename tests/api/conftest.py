@@ -1,4 +1,5 @@
 import pytest
+import requests
 
 from api.client.api_client import ApiClient
 from api.config.settings import Settings, get_settings
@@ -20,6 +21,28 @@ def api_client(settings: Settings) -> ApiClient:
     client = ApiClient(base_url=settings.api_base_url, timeout=settings.api_timeout)
     yield client
     client.close()
+
+
+@pytest.fixture(scope="session", autouse=True)
+def api_smoke_check(api_client: ApiClient):
+    """Fail fast with a clear message if the live API is unreachable (common on GHA)."""
+    try:
+        response = api_client.get("/productsList")
+    except requests.TooManyRedirects as exc:
+        pytest.fail(
+            "automationexercise.com API returned too many redirects. "
+            "Often caused by proxy env on CI or site blocking datacenter IPs. "
+            f"Base URL: {api_client.base_url}. Detail: {exc}"
+        )
+    except requests.RequestException as exc:
+        pytest.fail(f"automationexercise.com API request failed: {exc}")
+
+    if response.status_code != 200:
+        pytest.fail(f"API smoke check: expected HTTP 200, got {response.status_code}")
+
+    body = response.json
+    if body.get("responseCode") != 200:
+        pytest.fail(f"API smoke check: unexpected body {body!r}")
 
 
 @pytest.fixture

@@ -1,9 +1,21 @@
 import logging
+import time
 from typing import Any, Optional
 
 import requests
+from requests.exceptions import ConnectionError, TooManyRedirects
 
 logger = logging.getLogger(__name__)
+
+DEFAULT_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    ),
+    "Accept": "application/json, text/html, */*",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Referer": "https://automationexercise.com/",
+}
 
 
 class ApiResponse:
@@ -40,6 +52,9 @@ class ApiClient:
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
         self._session = requests.Session()
+        # GHA runners may set HTTP(S)_PROXY; trusting env can cause redirect loops.
+        self._session.trust_env = False
+        self._session.headers.update(DEFAULT_HEADERS)
 
     def close(self) -> None:
         self._session.close()
@@ -55,9 +70,22 @@ class ApiClient:
     ) -> ApiResponse:
         url = f"{self.base_url}{path}"
         kwargs.setdefault("timeout", self.timeout)
-        response = self._session.request(method, url, data=data, params=params, **kwargs)
-        logger.debug("%s %s -> %s", method.upper(), url, response.status_code)
-        return ApiResponse(response)
+
+        last_error: Optional[Exception] = None
+        for attempt in range(3):
+            try:
+                response = self._session.request(method, url, data=data, params=params, **kwargs)
+                logger.debug("%s %s -> %s", method.upper(), url, response.status_code)
+                return ApiResponse(response)
+            except (TooManyRedirects, ConnectionError) as exc:
+                last_error = exc
+                if attempt < 2:
+                    time.sleep(2 * (attempt + 1))
+                    continue
+                raise
+        if last_error:
+            raise last_error
+        raise RuntimeError("request failed without response")
 
     def get(self, path: str, **kwargs: Any) -> ApiResponse:
         return self.request("GET", path, **kwargs)
