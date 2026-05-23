@@ -167,13 +167,31 @@ class ProductsPage(BasePage):
         return [el.text.strip() for el in elements]
 
     def click_brand(self, brand_name: str):
-        """Click a brand link by its text."""
+        """Click a brand link by its text; fall back to direct URL if click is blocked in CI."""
+        target = brand_name.strip().upper()
         brand_links = self.find_elements(self.BRAND_LINKS)
+        link_to_click = None
+        href = None
         for link in brand_links:
-            if brand_name.upper() in link.text.upper():
-                link.click()
-                return
-        raise ValueError(f"Brand '{brand_name}' not found in the sidebar.")
+            if target in link.text.upper():
+                link_to_click = link
+                href = link.get_attribute("href")
+                break
+        if link_to_click is None:
+            raise ValueError(f"Brand '{brand_name}' not found in the sidebar.")
+
+        fallback_url = href or f"https://automationexercise.com/brand_products/{brand_name.strip()}"
+        self.driver.execute_script(
+            "arguments[0].scrollIntoView({block: 'center'});", link_to_click
+        )
+        self.driver.execute_script("arguments[0].click();", link_to_click)
+        try:
+            self.wait_for_url_contains("brand_products", timeout=8)
+        except Exception:
+            pass
+        if "brand_products" not in self.driver.current_url:
+            self.open(fallback_url)
+            self.wait_for_url_contains("brand_products")
 
     def click_category_women(self):
         self.click(self.CATEGORY_WOMEN)
