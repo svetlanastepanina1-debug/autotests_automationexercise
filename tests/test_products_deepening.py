@@ -31,14 +31,20 @@ class TestCategoryFilter:
     """P-16 — Women → Dress"""
 
     def test_women_dress_category_page(self, products_page: ProductsPage):
+        products_page.wait_for_product_grid()
         all_count = products_page.get_product_count()
         products_page.click_category_women_dress()
         products_page.wait_for_url_contains("category_products")
+        products_page.wait_for_product_grid()
         assert "category_products" in products_page.get_current_url()
         heading = products_page.get_main_heading_text().upper()
         assert "DRESS" in heading
         filtered_count = products_page.get_product_count()
-        assert 0 < filtered_count < all_count
+        assert filtered_count > 0
+        assert filtered_count < all_count, (
+            f"Expected fewer products on Dress category ({filtered_count}) "
+            f"than on All Products ({all_count})"
+        )
 
 
 class TestBrandFilter:
@@ -106,10 +112,12 @@ class TestProductCountRange:
     """P-21 — full catalog vs filtered subset"""
 
     def test_all_products_count_greater_than_category_subset(self, products_page: ProductsPage):
+        products_page.wait_for_product_grid()
         all_count = products_page.get_product_count()
         assert all_count >= 30, f"Expected a large catalog, got {all_count} products"
 
         products_page.click_category_women_dress()
         products_page.wait_for_url_contains("category_products")
+        products_page.wait_for_product_grid()
         dress_count = products_page.get_product_count()
         assert 0 < dress_count < all_count

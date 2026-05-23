@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 
 import pytest
+from pytest_html import extras as html_extras
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service as ChromeService
@@ -97,7 +98,7 @@ def pytest_runtest_makereport(item, call):
     screenshot_path = SCREENSHOTS_DIR / f"{safe_name}.png"
     try:
         driver.save_screenshot(str(screenshot_path))
-        report.extra = getattr(report, "extra", [])
-        report.extra.append(f"Screenshot: {screenshot_path}")
+        report.extras = getattr(report, "extras", [])
+        report.extras.append(html_extras.image(str(screenshot_path)))
     except Exception:
         pass
